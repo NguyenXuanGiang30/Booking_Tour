@@ -1,150 +1,214 @@
-# TravelQuest - PHP Version
+<h2 align="center">
 
-Đây là phiên bản PHP thuần của ứng dụng đặt tour du lịch TravelQuest, được chuyển đổi từ React/TypeScript.
+    🎯 TravelQuest - Booking Tour System
 
-## Yêu cầu hệ thống
+</h2>
 
-- PHP 7.4 hoặc cao hơn
-- MySQL 5.7 hoặc cao hơn (hoặc MariaDB)
-- Apache/Nginx với mod_rewrite
-- PDO extension cho PHP
+<div align="center">
 
-## Cài đặt
+    <p align="center">
 
-1. **Clone hoặc copy dự án vào thư mục web server của bạn**
+        <img src="https://img.shields.io/badge/TravelQuest-blue?style=for-the-badge" alt="TravelQuest Logo"/>
 
-2. **Tạo database:**
-   ```sql
-   mysql -u root -p < database.sql
-   ```
+    </p>
 
-3. **Cấu hình database trong `config.php`:**
-   ```php
-   define('DB_HOST', 'localhost');
-   define('DB_NAME', 'travel_quest');
-   define('DB_USER', 'root');
-   define('DB_PASS', 'your_password');
-   ```
+[![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://www.php.net/)
 
-4. **Cấu hình URL trong `config.php`:**
-   ```php
-   define('SITE_URL', 'http://localhost');
-   ```
+[![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
 
-5. **Cấu hình web server:**
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-   **Apache (.htaccess):**
-   ```apache
-   RewriteEngine On
-   RewriteCond %{REQUEST_FILENAME} !-f
-   RewriteCond %{REQUEST_FILENAME} !-d
-   RewriteRule ^(.*)$ index.php [QSA,L]
-   ```
+</div>
 
-   **Nginx:**
-   ```nginx
-   location / {
-       try_files $uri $uri/ /index.php?$query_string;
-   }
-   ```
+## 📖 1. Giới thiệu
 
-## Cấu trúc dự án
+Hệ thống đặt tour du lịch **TravelQuest** được xây dựng nhằm hỗ trợ công tác quản lý và đặt tour du lịch trực tuyến một cách hiện đại và tiện lợi. Thay vì quản lý thủ công bằng giấy tờ hay các tệp Excel rời rạc, hệ thống mang đến một giải pháp tập trung, hiện đại và dễ sử dụng với các tính năng như thanh toán VNPay, quản lý mã giảm giá, lịch trình tour, và thông báo email tự động.
+
+## 🔧 2. Các công nghệ được sử dụng
+
+<div align="center">
+
+### Hệ điều hành
+
+![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
+
+[![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/en-us/windows/)
+
+[![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com/)
+
+### Công nghệ chính
+
+[![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://www.php.net/)
+
+[![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](#)
+
+[![CSS](https://img.shields.io/badge/CSS-1572B6?style=for-the-badge&logo=css3&logoColor=white)](#)
+
+[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](#)
+
+[![Bootstrap](https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
+
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+
+### Web Server & Database
+
+[![Apache](https://img.shields.io/badge/Apache-D22128?style=for-the-badge&logo=apache&logoColor=white)](https://httpd.apache.org/)
+
+[![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/) 
+
+[![XAMPP](https://img.shields.io/badge/XAMPP-FB7A24?style=for-the-badge&logo=xampp&logoColor=white)](https://www.apachefriends.org/)
+
+### Database Management Tools
+
+[![MySQL Workbench](https://img.shields.io/badge/MySQL_Workbench-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://dev.mysql.com/downloads/workbench/)
+
+</div>
+
+## 🚀 3. Hình ảnh các chức năng
+
+### Trang đăng nhập
+
+*Hình ảnh trang đăng nhập với giao diện glass morphism*
+
+### Trang dashboard admin
+
+*Hình ảnh admin dashboard với thống kê tổng quan*
+
+### Trang dashboard người dùng     
+
+*Hình ảnh dashboard người dùng với quản lý booking, wishlist, thanh toán*
+
+### Trang danh sách tour 
+
+*Hình ảnh trang danh sách tour với bộ lọc và phân trang*
+
+### Trang chi tiết tour
+
+*Hình ảnh trang chi tiết tour với lịch trình, đánh giá, và form đặt tour*
+
+### Trang quản lý tour (Admin)
+
+*Hình ảnh trang quản lý tour với chức năng thêm, sửa, xóa*
+
+### Trang quản lý booking (Admin)
+
+*Hình ảnh trang quản lý booking với cập nhật trạng thái*
+
+### Trang quản lý user (Admin)
+
+*Hình ảnh trang quản lý người dùng*
+
+### Trang thanh toán VNPay
+
+*Hình ảnh quy trình thanh toán qua VNPay*
+
+## ⚙️ 4. Cài đặt
+
+### 4.1. Cài đặt công cụ, môi trường và các thư viện cần thiết
+
+- Tải và cài đặt **XAMPP**  
+
+  👉 https://www.apachefriends.org/download.html  
+
+  (Khuyến nghị bản XAMPP với PHP 8.x)
+
+- Cài đặt **Visual Studio Code** và các extension:
+
+  - PHP Intelephense  
+
+  - MySQL  
+
+  - Prettier – Code Formatter  
+
+### 4.2. Tải project
+
+Clone hoặc tải project về thư mục `htdocs` của XAMPP (ví dụ ổ C):
+
+```bash
+
+cd C:\xampp\htdocs
+
+# Nếu có Git repository
+git clone <repository-url> booking-tour
+
+# Hoặc giải nén file ZIP vào thư mục booking-tour
 
 ```
-/
-├── config.php              # Cấu hình chính
-├── index.php              # Entry point và routing
-├── database.sql           # SQL schema
-├── create_admin.php       # Script tạo admin mới
-├── .htaccess              # Apache URL rewriting
-├── README.md              # Tài liệu hướng dẫn
-├── includes/              # Core classes
-│   ├── Auth.php          # Authentication
-│   ├── Database.php      # Database connection
-│   └── Router.php        # Routing system
-├── functions/            # Data functions (thay thế models)
-│   ├── helper_function.php
-│   ├── tour_function.php
-│   ├── user_function.php
-│   ├── admin_function.php
-│   ├── booking_function.php
-│   ├── review_function.php
-│   └── wishlist_function.php
-├── handle/              # Process files (thay thế controllers)
-│   ├── home_process.php
-│   ├── tours_process.php
-│   ├── auth_process.php
-│   ├── dashboard_process.php
-│   ├── booking_process.php
-│   ├── wishlist_process.php
-│   └── admin_process.php
-└── views/                # Views/Templates
-    ├── layout.php
-    ├── home.php
-    ├── tours.php
-    ├── tour-detail.php
-    ├── login.php
-    ├── register.php
-    ├── dashboard.php
-    ├── about.php
-    ├── contact.php
-    ├── 404.php
-    ├── components/
-    │   ├── navbar.php
-    │   └── footer.php
-    └── admin/
-        ├── login.php
-        ├── dashboard.php
-        ├── tours.php
-        ├── tour-form.php
-        ├── bookings.php
-        └── users.php
+
+Truy cập project qua đường dẫn:
+
+👉 `http://localhost/booking-tour`
+
+### 4.3. Setup database
+
+Mở XAMPP Control Panel, Start Apache và MySQL
+
+Truy cập MySQL WorkBench
+
+Tạo database:
+
+```bash
+
+CREATE DATABASE IF NOT EXISTS travel_quest
+
+   CHARACTER SET utf8mb4
+
+   COLLATE utf8mb4_unicode_ci;
+
 ```
 
-## Tính năng
+Import file `database.sql`:
 
-### Người dùng
-- ✅ Trang chủ với tour nổi bật
-- ✅ Danh sách tour với bộ lọc
-- ✅ Chi tiết tour
-- ✅ Đăng ký/Đăng nhập
-- ✅ Dashboard người dùng
-- ✅ Quản lý booking
-- ✅ Wishlist
-- ✅ Reviews
-- ✅ Responsive design với Tailwind CSS
+```bash
 
-### Admin
-- ✅ Admin login/logout
-- ✅ Admin dashboard với thống kê
-- ✅ Quản lý tours (thêm, sửa, xóa)
-- ✅ Quản lý bookings (xem, cập nhật trạng thái)
-- ✅ Quản lý users (xem danh sách)
-- ✅ Giao diện admin chuyên nghiệp
+# Trong MySQL Workbench, chọn database travel_quest và import file database.sql
 
-## Sử dụng
+# Hoặc chạy lệnh:
+mysql -u root -p travel_quest < database.sql
 
-### Người dùng
-1. Truy cập `http://localhost` trong trình duyệt
-2. Đăng ký tài khoản mới hoặc đăng nhập
-3. Duyệt và đặt tour
+```
 
-### Admin
-1. Truy cập `http://localhost/admin/login`
-2. Đăng nhập với:
-   - **Username:** `admin`
-   - **Password:** `admin123`
-3. Quản lý tours, bookings, và users từ admin panel
+### 4.4. Setup tham số kết nối
 
-**Lưu ý:** Sau khi chạy `database.sql`, tài khoản admin mặc định sẽ được tạo tự động. Bạn có thể thay đổi password bằng cách cập nhật trong database hoặc tạo admin mới.
+Mở file `config.php` trong project, chỉnh thông tin DB:
 
-## Lưu ý
+```php
 
-- Đảm bảo quyền ghi cho thư mục session (nếu cần)
-- Trong môi trường production, tắt `display_errors` trong `config.php`
-- Sử dụng HTTPS cho bảo mật
-- Hash password được xử lý tự động bằng `password_hash()`
+<?php
 
-## License
+// Database Configuration
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'travel_quest');
+define('DB_USER', 'root');
+define('DB_PASS', ''); // Mật khẩu MySQL của bạn
+define('DB_CHARSET', 'utf8mb4');
 
-MIT
+// Site Configuration
+define('SITE_URL', 'http://localhost/booking-tour');
+define('SITE_NAME', 'TravelQuest');
+
+?>
+
+```
+
+### 4.5. Chạy hệ thống
+
+Mở XAMPP Control Panel → Start Apache và MySQL
+
+Truy cập hệ thống:
+
+👉 `http://localhost/booking-tour`
+
+### 4.6. Đăng nhập lần đầu
+
+Hệ thống có thể cấp tài khoản admin mặc định sau khi import database:
+
+- **Email:** `admin@travelquest.com`
+- **Password:** `admin123`
+
+Sau khi đăng nhập Admin có thể:
+
+- Quản lý tours (thêm, sửa, xóa)
+- Quản lý bookings (xem, cập nhật trạng thái)
+- Quản lý users (xem danh sách)
+- Xem thống kê tổng quan
