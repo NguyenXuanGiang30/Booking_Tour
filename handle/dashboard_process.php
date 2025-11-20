@@ -13,6 +13,8 @@ require_once __DIR__ . '/../functions/tour_function.php';
 require_once __DIR__ . '/../functions/payment_method_function.php';
 require_once __DIR__ . '/../functions/helper_function.php';
 
+// Set no-cache headers to prevent browser caching
+Auth::setNoCacheHeaders();
 Auth::requireLogin();
 
 $action = $_GET['action'] ?? 'index';
@@ -26,7 +28,12 @@ if (!in_array($view, $allowedViews)) {
 
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($action === 'update-profile') {
+    // Verify CSRF token for all POST requests
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!Auth::verifyCsrfToken($csrfToken)) {
+        $error = 'Invalid security token. Please try again.';
+        $view = 'profile';
+    } elseif ($action === 'update-profile') {
         $birthday = trim($_POST['birthday'] ?? '');
         
         $data = [

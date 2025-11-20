@@ -26,11 +26,13 @@ ob_start();
             <?php endif; ?>
 
             <form method="POST" action="<?= url('/login') ?>" class="space-y-6">
+                <?php require_once __DIR__ . '/../includes/Auth.php'; ?>
+                <input type="hidden" name="csrf_token" value="<?= Auth::generateCsrfToken() ?>">
                 <div>
-                    <label class="block text-sm font-medium text-white mb-2 drop-shadow-md"><?= __('auth.email') ?></label>
+                    <label class="block text-sm font-medium text-white mb-2 drop-shadow-md"><?= __('auth.email') ?> / Username</label>
                     <div class="relative">
-                        <i class="fas fa-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-white/70"></i>
-                        <input type="email" name="email" required placeholder="<?= __('auth.email_placeholder') ?>" class="w-full pl-10 pr-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-white/60 focus:ring-2 focus:ring-white/50 focus:border-white/50 focus:bg-white/30 transition-all">
+                        <i class="fas fa-user absolute left-3 top-1/2 transform -translate-y-1/2 text-white/70"></i>
+                        <input type="text" name="email" required placeholder="Email or Username" class="w-full pl-10 pr-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-white/60 focus:ring-2 focus:ring-white/50 focus:border-white/50 focus:bg-white/30 transition-all">
                     </div>
                 </div>
 

@@ -224,23 +224,12 @@ ob_start();
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
                                 <div class="space-y-2">
-                                    <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                                        <input type="radio" name="payment_type" value="vnpay" checked class="mr-3 text-blue-600 focus:ring-blue-500">
-                                        <div class="flex-1">
-                                            <div class="flex items-center">
-                                                <img src="https://sandbox.vnpayment.vn/apis/assets/images/logo.svg" alt="VNPay" class="h-6 mr-2">
-                                                <span class="font-medium">VNPay</span>
-                                            </div>
-                                            <p class="text-xs text-gray-500 mt-1">Thanh toán qua VNPay (ATM, Visa, Mastercard)</p>
-                                        </div>
-                                    </label>
-                                    
                                     <?php if (!empty($paymentMethods)): ?>
                                         <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                                            <input type="radio" name="payment_type" value="saved" class="mr-3 text-blue-600 focus:ring-blue-500">
+                                            <input type="radio" name="payment_type" value="saved" checked class="mr-3 text-blue-600 focus:ring-blue-500">
                                             <div class="flex-1">
                                                 <span class="font-medium">Saved Payment Method</span>
-                                                <select name="payment_method_id" id="paymentMethodSelect" class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" disabled>
+                                                <select name="payment_method_id" id="paymentMethodSelect" class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
                                                     <option value="">Select a payment method</option>
                                                     <?php foreach ($paymentMethods as $method): ?>
                                                         <option value="<?= htmlspecialchars($method['id']) ?>" <?= $defaultPaymentMethod && $defaultPaymentMethod['id'] === $method['id'] ? 'selected' : '' ?>>
@@ -501,90 +490,32 @@ function bookNow() {
     <?php else: ?>
         const form = document.getElementById('bookingForm');
         const formData = new FormData(form);
-        const paymentType = formData.get('payment_type') || 'vnpay';
-        
-        // Enable/disable payment method select based on radio selection
-        const paymentMethodSelect = document.getElementById('paymentMethodSelect');
-        if (paymentMethodSelect) {
-            paymentMethodSelect.disabled = (paymentType !== 'saved');
-        }
         
         // Add coupon code if applied
         if (appliedCoupon) {
             formData.append('coupon_code', appliedCoupon);
         }
         
-        if (paymentType === 'vnpay') {
-            // Create booking first, then redirect to VNPay
-            fetch('<?= url('/api/booking') ?>', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.booking_id) {
-                    // Create VNPay payment URL
-                    const paymentFormData = new FormData();
-                    paymentFormData.append('booking_id', data.booking_id);
-                    
-                    fetch('<?= url('/payment/vnpay/create') ?>', {
-                        method: 'POST',
-                        body: paymentFormData
-                    })
-                    .then(response => response.json())
-                    .then(paymentData => {
-                        if (paymentData.success && paymentData.payment_url) {
-                            // Redirect to VNPay
-                            window.location.href = paymentData.payment_url;
-                        } else {
-                            alert('Failed to create payment: ' + (paymentData.error || 'Unknown error'));
-                        }
-                    })
-                    .catch(error => {
-                        alert('Error creating payment: ' + error.message);
-                    });
-                } else {
-                    alert('Failed to create booking: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-            });
-        } else {
-            // Use saved payment method
-            fetch('<?= url('/api/booking') ?>', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Booking created successfully!');
-                    window.location.href = '<?= url('/dashboard?view=bookings') ?>';
-                } else {
-                    alert('Failed to create booking: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-            });
-        }
+        // Use saved payment method
+        fetch('<?= url('/api/booking') ?>', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Booking created successfully!');
+                window.location.href = '<?= url('/dashboard?view=bookings') ?>';
+            } else {
+                alert('Failed to create booking: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error.message);
+        });
     <?php endif; ?>
 }
 
-// Enable/disable payment method select based on radio selection
-document.addEventListener('DOMContentLoaded', function() {
-    const paymentTypeRadios = document.querySelectorAll('input[name="payment_type"]');
-    const paymentMethodSelect = document.getElementById('paymentMethodSelect');
-    
-    if (paymentTypeRadios.length > 0 && paymentMethodSelect) {
-        paymentTypeRadios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                paymentMethodSelect.disabled = (this.value !== 'saved');
-            });
-        });
-    }
-});
 
 <?php if ($isLoggedIn): ?>
 function toggleWishlist(tourId) {

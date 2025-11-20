@@ -162,7 +162,7 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             // Calculate final price for response
             $finalPrice = $totalPrice - $discountAmount;
             
-            // Return booking ID for VNPay payment flow
+            // Return booking ID
             $response = [
                 'success' => true, 
                 'message' => 'Booking created successfully',

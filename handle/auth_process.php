@@ -11,27 +11,52 @@ $action = $_GET['action'] ?? '';
 
 switch ($action) {
     case 'login':
+        // Set no-cache headers to prevent browser caching
+        Auth::setNoCacheHeaders();
+        
         // Redirect if already logged in
+        if (Auth::isAdmin()) {
+            header('Location: ' . url('/admin/dashboard'));
+            exit;
+        }
         if (Auth::isLoggedIn()) {
             header('Location: ' . url('/'));
             exit;
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = trim($_POST['email'] ?? '');
+            // Verify CSRF token
+            $csrfToken = $_POST['csrf_token'] ?? '';
+            if (!Auth::verifyCsrfToken($csrfToken)) {
+                $error = 'Invalid security token. Please try again.';
+                require_once __DIR__ . '/../views/login.php';
+                exit;
+            }
+            
+            require_once __DIR__ . '/../functions/helper_function.php';
+            // Accept both email and username (for admin login)
+            $emailOrUsername = trim($_POST['email'] ?? '');
             $password = $_POST['password'] ?? '';
 
-            if (empty($email) || empty($password)) {
-                $error = 'Email and password are required';
+            if (empty($emailOrUsername) || empty($password)) {
+                $error = 'Email/Username and password are required';
                 require_once __DIR__ . '/../views/login.php';
                 exit;
             }
 
-            $user = authenticate_user($email, $password);
+            $user = authenticate_user($emailOrUsername, $password);
 
             if ($user) {
-                Auth::login($user['user_id'], $user);
-                header('Location: ' . url('/'));
+                // Check if user is admin
+                if (isset($user['is_admin']) && $user['is_admin'] === true) {
+                    // Login as admin
+                    Auth::adminLogin($user['user_id'], $user);
+                    header('Location: ' . url('/admin/dashboard'));
+                } else {
+                    // Login as regular user
+                    Auth::login($user['user_id'], $user);
+                    header('Location: ' . url('/'));
+                }
                 exit;
             } else {
                 $error = 'Invalid email or password';
@@ -50,7 +75,16 @@ switch ($action) {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = trim($_POST['email'] ?? '');
+            // Verify CSRF token
+            $csrfToken = $_POST['csrf_token'] ?? '';
+            if (!Auth::verifyCsrfToken($csrfToken)) {
+                $error = 'Invalid security token. Please try again.';
+                require_once __DIR__ . '/../views/register.php';
+                exit;
+            }
+            
+            require_once __DIR__ . '/../functions/helper_function.php';
+            $email = sanitize_email($_POST['email'] ?? '');
             $password = $_POST['password'] ?? '';
             $fullName = trim($_POST['full_name'] ?? '');
             $confirmPassword = $_POST['confirm_password'] ?? '';
@@ -62,7 +96,7 @@ switch ($action) {
                 exit;
             }
 
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if (empty($email)) {
                 $error = 'Invalid email format';
                 require_once __DIR__ . '/../views/register.php';
                 exit;
@@ -103,8 +137,16 @@ switch ($action) {
         break;
 
     case 'logout':
+        // Clear both user and admin sessions
+        Auth::start();
+        $wasAdmin = Auth::isAdmin();
         Auth::logout();
-        header('Location: ' . url('/'));
+        // Redirect to appropriate page
+        if ($wasAdmin) {
+            header('Location: ' . url('/admin/login'));
+        } else {
+            header('Location: ' . url('/'));
+        }
         exit;
         break;
 

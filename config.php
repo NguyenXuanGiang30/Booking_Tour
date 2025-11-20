@@ -24,24 +24,21 @@ if (isset($_SERVER['SCRIPT_NAME'])) {
 // Session Configuration
 define('SESSION_LIFETIME', 3600); // 1 hour
 
-// Timezone - VNPay requires Asia/Ho_Chi_Minh
+// Timezone
 date_default_timezone_set('Asia/Ho_Chi_Minh');
 
+// Debug Mode (set to false in production)
+define('DEBUG', false);
+
 // Error Reporting (disable in production)
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// VNPay Configuration
-// Get these from VNPay merchant portal: https://sandbox.vnpayment.vn/
-define('VNPAY_TMN_CODE', 'WL32PUHB'); // Your VNPay Terminal Code (TmnCode)
-define('VNPAY_HASH_SECRET', 'LMBW1WQN2RHA4I738D09SREYE1RSB55F'); // Your VNPay Hash Secret
-// Sandbox URL for testing
-define('VNPAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
-// Production URL (uncomment when going live)
-// define('VNPAY_URL', 'https://www.vnpay.vn/paymentv2/vpcpay.html');
-
-// VNPay Debug Mode (set to false in production)
-define('VNPAY_DEBUG', false);
+if (DEBUG) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    ini_set('log_errors', 1);
+}
 
 // Email Configuration
 define('SMTP_HOST', 'smtp.gmail.com'); // SMTP server

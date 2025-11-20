@@ -26,6 +26,8 @@ ob_start();
             <?php endif; ?>
 
             <form method="POST" action="<?= url('/register') ?>" class="space-y-6">
+                <?php require_once __DIR__ . '/../includes/Auth.php'; ?>
+                <input type="hidden" name="csrf_token" value="<?= Auth::generateCsrfToken() ?>">
                 <div>
                     <label class="block text-sm font-medium text-white mb-2 drop-shadow-md"><?= __('auth.full_name') ?></label>
                     <div class="relative">

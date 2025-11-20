@@ -20,7 +20,7 @@
 </div>
  
 ## 📖 1. Giới thiệu
-Hệ thống đặt tour du lịch **TravelQuest** được xây dựng nhằm hỗ trợ công tác quản lý và đặt tour du lịch trực tuyến một cách hiện đại và tiện lợi. Thay vì quản lý thủ công bằng giấy tờ hay các tệp Excel rời rạc, hệ thống mang đến một giải pháp tập trung, hiện đại và dễ sử dụng với các tính năng như thanh toán VNPay, quản lý mã giảm giá, lịch trình tour, và thông báo email tự động.
+Hệ thống đặt tour du lịch **TravelQuest** được xây dựng nhằm hỗ trợ công tác quản lý và đặt tour du lịch trực tuyến một cách hiện đại và tiện lợi. Thay vì quản lý thủ công bằng giấy tờ hay các tệp Excel rời rạc, hệ thống mang đến một giải pháp tập trung, hiện đại và dễ sử dụng với các tính năng như quản lý mã giảm giá, lịch trình tour, và thông báo email tự động.
 
 ## 🔧 2. Các công nghệ được sử dụng
 <div align="center">
@@ -80,10 +80,6 @@ Hệ thống đặt tour du lịch **TravelQuest** được xây dựng nhằm h
 ### Trang quản lý user (Admin)
 
 *Hình ảnh trang quản lý người dùng*
-
-### Trang thanh toán VNPay
-
-*Hình ảnh quy trình thanh toán qua VNPay*
 
 ## ⚙️ 4. Cài đặt
 

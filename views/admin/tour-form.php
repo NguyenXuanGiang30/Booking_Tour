@@ -67,6 +67,8 @@ ob_start();
                 <?php endif; ?>
 
                 <form method="POST" action="<?= url('/admin/tours/' . ($isEdit ? 'edit/' . $tour['id'] : 'create')) ?>" class="bg-white rounded-xl shadow-lg p-8 space-y-6">
+                    <?php require_once __DIR__ . '/../../includes/Auth.php'; ?>
+                    <input type="hidden" name="csrf_token" value="<?= Auth::generateCsrfToken() ?>">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Title *</label>

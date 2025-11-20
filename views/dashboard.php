@@ -54,6 +54,8 @@ ob_start();
                     <div class="bg-white rounded-xl shadow-lg p-8">
                         <h2 class="text-2xl font-bold text-gray-900 mb-6">Profile Information</h2>
                         <form method="POST" action="<?= url('/dashboard/profile') ?>" class="space-y-6">
+                            <?php require_once __DIR__ . '/../includes/Auth.php'; ?>
+                            <input type="hidden" name="csrf_token" value="<?= Auth::generateCsrfToken() ?>">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
@@ -192,7 +194,9 @@ ob_start();
                                                 <div class="flex items-center space-x-2">
                                                     <?php if (!$method['is_default']): ?>
                                                         <form method="POST" action="<?= url('/dashboard/payment-method/set-default') ?>" class="inline">
-                                                            <input type="hidden" name="id" value="<?= $method['id'] ?>">
+                                                            <?php require_once __DIR__ . '/../includes/Auth.php'; ?>
+                                                            <input type="hidden" name="csrf_token" value="<?= Auth::generateCsrfToken() ?>">
+                                                            <input type="hidden" name="id" value="<?= htmlspecialchars($method['id']) ?>">
                                                             <button type="submit" class="text-blue-600 hover:text-blue-700 text-sm" title="Set as default">
                                                                 <i class="fas fa-star"></i>
                                                             </button>
@@ -202,7 +206,9 @@ ob_start();
                                                         <i class="fas fa-edit"></i>
                                                     </button>
                                                     <form method="POST" action="<?= url('/dashboard/payment-method/delete') ?>" class="inline" onsubmit="return confirm('Are you sure you want to delete this payment method?')">
-                                                        <input type="hidden" name="id" value="<?= $method['id'] ?>">
+                                                        <?php require_once __DIR__ . '/../includes/Auth.php'; ?>
+                                                        <input type="hidden" name="csrf_token" value="<?= Auth::generateCsrfToken() ?>">
+                                                        <input type="hidden" name="id" value="<?= htmlspecialchars($method['id']) ?>">
                                                         <button type="submit" class="text-red-600 hover:text-red-700" title="Delete">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
@@ -364,6 +370,8 @@ ob_start();
                         <div class="mb-8">
                             <h3 class="text-xl font-semibold text-gray-900 mb-4">Change Password</h3>
                             <form method="POST" action="<?= url('/dashboard/password') ?>" class="space-y-4 max-w-md">
+                                <?php require_once __DIR__ . '/../includes/Auth.php'; ?>
+                                <input type="hidden" name="csrf_token" value="<?= Auth::generateCsrfToken() ?>">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
                                     <input type="password" name="current_password" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">

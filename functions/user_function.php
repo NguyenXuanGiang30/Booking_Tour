@@ -38,10 +38,13 @@ function create_user($email, $password, $fullName) {
 }
 
 /**
- * Authenticate user
+ * Authenticate user (also checks admin table)
+ * Returns user data with 'is_admin' flag if found in admins table
  */
 function authenticate_user($email, $password) {
     $db = get_db();
+    
+    // First, try to authenticate as regular user
     $stmt = $db->prepare("
         SELECT ua.user_id, ua.password, p.* 
         FROM user_auth ua 
@@ -53,7 +56,25 @@ function authenticate_user($email, $password) {
 
     if ($user && password_verify($password, $user['password'])) {
         unset($user['password']);
+        $user['is_admin'] = false;
         return $user;
+    }
+
+    // If not found as user, check if it's an admin
+    $stmt = $db->prepare("
+        SELECT id, email, password, username, full_name, role, is_active
+        FROM admins 
+        WHERE (email = :email OR username = :email) AND is_active = 1
+    ");
+    $stmt->execute([':email' => $email]);
+    $admin = $stmt->fetch();
+
+    if ($admin && password_verify($password, $admin['password'])) {
+        unset($admin['password']);
+        // Format admin data to match user structure
+        $admin['user_id'] = $admin['id'];
+        $admin['is_admin'] = true;
+        return $admin;
     }
 
     return false;

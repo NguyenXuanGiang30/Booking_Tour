@@ -13,7 +13,14 @@ class Database {
             ];
             $this->pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            die("Database connection failed: " . $e->getMessage());
+            // Log the full error for debugging
+            error_log("Database connection failed: " . $e->getMessage());
+            // Don't expose database details to users
+            if (defined('DEBUG') && DEBUG) {
+                die("Database connection failed: " . $e->getMessage());
+            } else {
+                die("Database connection failed. Please contact the administrator.");
+            }
         }
     }
 

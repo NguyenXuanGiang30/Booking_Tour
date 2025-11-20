@@ -22,6 +22,8 @@ ob_start();
             <?php endif; ?>
 
             <form method="POST" action="<?= url('/admin/login') ?>" class="space-y-6">
+                <?php require_once __DIR__ . '/../../includes/Auth.php'; ?>
+                <input type="hidden" name="csrf_token" value="<?= Auth::generateCsrfToken() ?>">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Username or Email</label>
                     <div class="relative">

@@ -13,12 +13,23 @@ $action = $_GET['action'] ?? '';
 
 switch ($action) {
     case 'login':
+        // Set no-cache headers to prevent browser caching
+        Auth::setNoCacheHeaders();
+        
         if (Auth::isAdmin()) {
             header('Location: ' . url('/admin/dashboard'));
             exit;
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Verify CSRF token
+            $csrfToken = $_POST['csrf_token'] ?? '';
+            if (!Auth::verifyCsrfToken($csrfToken)) {
+                $error = 'Invalid security token. Please try again.';
+                require_once __DIR__ . '/../views/admin/login.php';
+                exit;
+            }
+            
             $username = trim($_POST['username'] ?? '');
             $password = $_POST['password'] ?? '';
 
@@ -53,18 +64,44 @@ switch ($action) {
         break;
 
     case 'dashboard':
+        // Set no-cache headers (requireAdmin already sets them, but explicit for clarity)
+        Auth::setNoCacheHeaders();
         Auth::requireAdmin();
 
         $db = Database::getInstance()->getConnection();
 
-        // Statistics
+        // Statistics - Use prepared statements for security
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM tours");
+        $stmt->execute();
+        $totalTours = intval($stmt->fetch()['count'] ?? 0);
+        
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM profiles");
+        $stmt->execute();
+        $totalUsers = intval($stmt->fetch()['count'] ?? 0);
+        
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM bookings");
+        $stmt->execute();
+        $totalBookings = intval($stmt->fetch()['count'] ?? 0);
+        
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM bookings WHERE status = :status");
+        $stmt->execute([':status' => 'pending']);
+        $pendingBookings = intval($stmt->fetch()['count'] ?? 0);
+        
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM bookings WHERE status = :status");
+        $stmt->execute([':status' => 'paid']);
+        $paidBookings = intval($stmt->fetch()['count'] ?? 0);
+        
+        $stmt = $db->prepare("SELECT COALESCE(SUM(total_price), 0) as total FROM bookings WHERE status = :status");
+        $stmt->execute([':status' => 'paid']);
+        $totalRevenue = floatval($stmt->fetch()['total'] ?? 0);
+        
         $stats = [
-            'total_tours' => $db->query("SELECT COUNT(*) as count FROM tours")->fetch()['count'],
-            'total_users' => $db->query("SELECT COUNT(*) as count FROM profiles")->fetch()['count'],
-            'total_bookings' => $db->query("SELECT COUNT(*) as count FROM bookings")->fetch()['count'],
-            'pending_bookings' => $db->query("SELECT COUNT(*) as count FROM bookings WHERE status = 'pending'")->fetch()['count'],
-            'paid_bookings' => $db->query("SELECT COUNT(*) as count FROM bookings WHERE status = 'paid'")->fetch()['count'],
-            'total_revenue' => floatval($db->query("SELECT COALESCE(SUM(total_price), 0) as total FROM bookings WHERE status = 'paid'")->fetch()['total'] ?? 0),
+            'total_tours' => $totalTours,
+            'total_users' => $totalUsers,
+            'total_bookings' => $totalBookings,
+            'pending_bookings' => $pendingBookings,
+            'paid_bookings' => $paidBookings,
+            'total_revenue' => $totalRevenue,
         ];
 
         // Bookings by month (last 6 months)
@@ -184,6 +221,14 @@ switch ($action) {
         Auth::requireAdmin();
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Verify CSRF token
+            $csrfToken = $_POST['csrf_token'] ?? '';
+            if (!Auth::verifyCsrfToken($csrfToken)) {
+                $error = 'Invalid security token. Please try again.';
+                require_once __DIR__ . '/../views/admin/tour-form.php';
+                exit;
+            }
+            
             $id = generate_uuid();
             
             // Validate and sanitize input
@@ -241,6 +286,14 @@ switch ($action) {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Verify CSRF token
+            $csrfToken = $_POST['csrf_token'] ?? '';
+            if (!Auth::verifyCsrfToken($csrfToken)) {
+                $error = 'Invalid security token. Please try again.';
+                require_once __DIR__ . '/../views/admin/tour-form.php';
+                exit;
+            }
+            
             // Validate and sanitize input
             $images = array_filter(array_map('trim', explode(',', $_POST['images'] ?? '')));
             $included = array_filter(array_map('trim', explode("\n", $_POST['included'] ?? '')));

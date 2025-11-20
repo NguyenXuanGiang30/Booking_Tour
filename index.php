@@ -208,34 +208,4 @@ $router->post('/admin/bookings/status', function() {
     require_once 'handle/admin_process.php';
 });
 
-// VNPay Payment routes
-$router->post('/payment/vnpay/create', function() {
-    $_GET['action'] = 'create';
-    require_once 'handle/vnpay_process.php';
-});
-$router->get('/payment/vnpay/return', function() {
-    // Preserve all GET parameters from VNPay
-    // Router already preserves $_GET, but we need to ensure action is set
-    $_GET['action'] = 'return';
-    
-    // Debug: Log all parameters
-    if (defined('VNPAY_DEBUG') && VNPAY_DEBUG) {
-        error_log('VNPay Return - All GET params: ' . json_encode($_GET));
-        error_log('VNPay Return - REQUEST_URI: ' . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
-        error_log('VNPay Return - QUERY_STRING: ' . ($_SERVER['QUERY_STRING'] ?? 'N/A'));
-    }
-    
-    require_once 'handle/vnpay_process.php';
-});
-$router->get('/payment/vnpay/ipn', function() {
-    $_GET['action'] = 'ipn';
-    require_once 'handle/vnpay_process.php';
-});
-$router->get('/payment/vnpay/success', function() {
-    require_once 'views/payment/vnpay-success.php';
-});
-$router->get('/payment/vnpay/error', function() {
-    require_once 'views/payment/vnpay-error.php';
-});
-
 $router->dispatch();
