@@ -80,14 +80,20 @@ CREATE TABLE IF NOT EXISTS bookings (
     traveler_info JSON,
     payment_method VARCHAR(100) DEFAULT '',
     payment_method_id VARCHAR(36) DEFAULT NULL,
+    coupon_code VARCHAR(50) DEFAULT NULL,
+    coupon_id VARCHAR(36) DEFAULT NULL,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    final_price DECIMAL(10,2) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE,
     FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE,
     FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id) ON DELETE SET NULL,
+    FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE SET NULL,
     INDEX idx_user_id (user_id),
     INDEX idx_tour_id (tour_id),
-    INDEX idx_payment_method_id (payment_method_id)
+    INDEX idx_payment_method_id (payment_method_id),
+    INDEX idx_coupon_id (coupon_id)
 );
 
 -- Reviews table
@@ -130,6 +136,46 @@ CREATE TABLE IF NOT EXISTS admins (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
     INDEX idx_username (username)
+);
+
+-- Coupons table
+CREATE TABLE IF NOT EXISTS coupons (
+    id VARCHAR(36) PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    status VARCHAR(20) NOT NULL DEFAULT 'active', -- active, inactive
+    discount_type VARCHAR(20) NOT NULL DEFAULT 'percentage', -- percentage, fixed
+    discount_value DECIMAL(10,2) NOT NULL,
+    max_discount DECIMAL(10,2) DEFAULT NULL, -- Maximum discount for percentage type
+    min_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    usage_limit INT DEFAULT NULL, -- NULL means unlimited
+    used_count INT NOT NULL DEFAULT 0,
+    valid_from DATETIME NOT NULL,
+    valid_to DATETIME NOT NULL,
+    applicable_tours JSON DEFAULT NULL, -- Array of tour IDs, NULL means all tours
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_code (code),
+    INDEX idx_status (status),
+    INDEX idx_valid_from (valid_from),
+    INDEX idx_valid_to (valid_to)
+);
+
+-- Coupon usage tracking table
+CREATE TABLE IF NOT EXISTS coupon_usage (
+    id VARCHAR(36) PRIMARY KEY,
+    coupon_id VARCHAR(36) NOT NULL,
+    booking_id VARCHAR(36) NOT NULL,
+    user_id VARCHAR(36) NOT NULL,
+    discount_amount DECIMAL(10,2) NOT NULL,
+    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE CASCADE,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE,
+    INDEX idx_coupon_id (coupon_id),
+    INDEX idx_booking_id (booking_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_used_at (used_at)
 );
 
 -- Insert default admin accounts

@@ -44,6 +44,9 @@ ob_start();
                     <a href="<?= url('/admin/users') ?>" class="block px-4 py-2 hover:bg-gray-800 rounded-lg transition-colors">
                         <i class="fas fa-users mr-2"></i> Users
                     </a>
+                    <a href="<?= url('/admin/coupons') ?>" class="block px-4 py-2 hover:bg-gray-800 rounded-lg transition-colors">
+                        <i class="fas fa-ticket-alt mr-2"></i> Coupons
+                    </a>
                     <a href="<?= url('/') ?>" class="block px-4 py-2 hover:bg-gray-800 rounded-lg transition-colors mt-8">
                         <i class="fas fa-home mr-2"></i> View Website
                     </a>

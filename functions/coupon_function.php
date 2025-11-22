@@ -203,3 +203,270 @@ function get_active_coupons($limit = 10) {
     return $stmt->fetchAll();
 }
 
+/**
+ * Get coupon by ID
+ */
+function get_coupon_by_id($id) {
+    $db = get_db();
+    $stmt = $db->prepare("SELECT * FROM coupons WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    $coupon = $stmt->fetch();
+    
+    if ($coupon && !empty($coupon['applicable_tours'])) {
+        $coupon['applicable_tours'] = json_decode($coupon['applicable_tours'], true) ?: [];
+    } else {
+        $coupon['applicable_tours'] = [];
+    }
+    
+    return $coupon;
+}
+
+/**
+ * Get all coupons with filters and pagination
+ */
+function get_all_coupons($filters = [], $limit = null, $offset = 0) {
+    $db = get_db();
+    $sql = "SELECT * FROM coupons WHERE 1=1";
+    $params = [];
+    
+    if (!empty($filters['search'])) {
+        $sql .= " AND (code LIKE :search OR description LIKE :search)";
+        $params[':search'] = '%' . $filters['search'] . '%';
+    }
+    
+    if (!empty($filters['status'])) {
+        $sql .= " AND status = :status";
+        $params[':status'] = $filters['status'];
+    }
+    
+    // Sorting
+    $sortBy = $filters['sortBy'] ?? 'created_at';
+    $sortOrder = $filters['sortOrder'] ?? 'DESC';
+    $sql .= " ORDER BY $sortBy $sortOrder";
+    
+    // Pagination
+    if ($limit !== null) {
+        $sql .= " LIMIT :limit OFFSET :offset";
+        $params[':limit'] = $limit;
+        $params[':offset'] = $offset;
+    }
+    
+    $stmt = $db->prepare($sql);
+    foreach ($params as $key => $value) {
+        if ($key === ':limit' || $key === ':offset') {
+            $stmt->bindValue($key, $value, PDO::PARAM_INT);
+        } else {
+            $stmt->bindValue($key, $value);
+        }
+    }
+    $stmt->execute();
+    $coupons = $stmt->fetchAll();
+    
+    foreach ($coupons as &$coupon) {
+        if (!empty($coupon['applicable_tours'])) {
+            $coupon['applicable_tours'] = json_decode($coupon['applicable_tours'], true) ?: [];
+        } else {
+            $coupon['applicable_tours'] = [];
+        }
+    }
+    
+    return $coupons;
+}
+
+/**
+ * Count coupons with filters
+ */
+function count_coupons($filters = []) {
+    $db = get_db();
+    $sql = "SELECT COUNT(*) as total FROM coupons WHERE 1=1";
+    $params = [];
+    
+    if (!empty($filters['search'])) {
+        $sql .= " AND (code LIKE :search OR description LIKE :search)";
+        $params[':search'] = '%' . $filters['search'] . '%';
+    }
+    
+    if (!empty($filters['status'])) {
+        $sql .= " AND status = :status";
+        $params[':status'] = $filters['status'];
+    }
+    
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $result = $stmt->fetch();
+    return intval($result['total'] ?? 0);
+}
+
+/**
+ * Create new coupon
+ */
+function create_coupon($data) {
+    $db = get_db();
+    $id = generate_uuid();
+    
+    $applicableTours = !empty($data['applicable_tours']) && is_array($data['applicable_tours']) 
+        ? json_encode($data['applicable_tours']) 
+        : null;
+    
+    $stmt = $db->prepare("
+        INSERT INTO coupons (
+            id, code, status, discount_type, discount_value, max_discount,
+            min_amount, usage_limit, valid_from, valid_to, applicable_tours, description,
+            created_at, updated_at
+        ) VALUES (
+            :id, :code, :status, :discount_type, :discount_value, :max_discount,
+            :min_amount, :usage_limit, :valid_from, :valid_to, :applicable_tours, :description,
+            NOW(), NOW()
+        )
+    ");
+    
+    $result = $stmt->execute([
+        ':id' => $id,
+        ':code' => strtoupper(trim($data['code'])),
+        ':status' => $data['status'] ?? 'active',
+        ':discount_type' => $data['discount_type'] ?? 'percentage',
+        ':discount_value' => floatval($data['discount_value'] ?? 0),
+        ':max_discount' => !empty($data['max_discount']) ? floatval($data['max_discount']) : null,
+        ':min_amount' => floatval($data['min_amount'] ?? 0),
+        ':usage_limit' => !empty($data['usage_limit']) ? intval($data['usage_limit']) : null,
+        ':valid_from' => $data['valid_from'],
+        ':valid_to' => $data['valid_to'],
+        ':applicable_tours' => $applicableTours,
+        ':description' => $data['description'] ?? null
+    ]);
+    
+    return $result ? $id : false;
+}
+
+/**
+ * Update coupon
+ */
+function update_coupon($id, $data) {
+    $db = get_db();
+    
+    $applicableTours = !empty($data['applicable_tours']) && is_array($data['applicable_tours']) 
+        ? json_encode($data['applicable_tours']) 
+        : null;
+    
+    $stmt = $db->prepare("
+        UPDATE coupons SET
+            code = :code,
+            status = :status,
+            discount_type = :discount_type,
+            discount_value = :discount_value,
+            max_discount = :max_discount,
+            min_amount = :min_amount,
+            usage_limit = :usage_limit,
+            valid_from = :valid_from,
+            valid_to = :valid_to,
+            applicable_tours = :applicable_tours,
+            description = :description,
+            updated_at = NOW()
+        WHERE id = :id
+    ");
+    
+    $result = $stmt->execute([
+        ':id' => $id,
+        ':code' => strtoupper(trim($data['code'])),
+        ':status' => $data['status'] ?? 'active',
+        ':discount_type' => $data['discount_type'] ?? 'percentage',
+        ':discount_value' => floatval($data['discount_value'] ?? 0),
+        ':max_discount' => !empty($data['max_discount']) ? floatval($data['max_discount']) : null,
+        ':min_amount' => floatval($data['min_amount'] ?? 0),
+        ':usage_limit' => !empty($data['usage_limit']) ? intval($data['usage_limit']) : null,
+        ':valid_from' => $data['valid_from'],
+        ':valid_to' => $data['valid_to'],
+        ':applicable_tours' => $applicableTours,
+        ':description' => $data['description'] ?? null
+    ]);
+    
+    return $result;
+}
+
+/**
+ * Delete coupon
+ */
+function delete_coupon($id) {
+    $db = get_db();
+    $stmt = $db->prepare("DELETE FROM coupons WHERE id = :id");
+    return $stmt->execute([':id' => $id]);
+}
+
+/**
+ * Get coupon statistics
+ */
+function get_coupon_statistics() {
+    $db = get_db();
+    
+    // Total coupons
+    $stmt = $db->prepare("SELECT COUNT(*) as total FROM coupons");
+    $stmt->execute();
+    $totalCoupons = intval($stmt->fetch()['total'] ?? 0);
+    
+    // Active coupons
+    $now = date('Y-m-d H:i:s');
+    $stmt = $db->prepare("
+        SELECT COUNT(*) as total FROM coupons 
+        WHERE status = 'active' 
+        AND valid_from <= :now 
+        AND valid_to >= :now
+    ");
+    $stmt->execute([':now' => $now]);
+    $activeCoupons = intval($stmt->fetch()['total'] ?? 0);
+    
+    // Expired coupons
+    $stmt = $db->prepare("
+        SELECT COUNT(*) as total FROM coupons 
+        WHERE valid_to < :now
+    ");
+    $stmt->execute([':now' => $now]);
+    $expiredCoupons = intval($stmt->fetch()['total'] ?? 0);
+    
+    // Total usage count
+    $stmt = $db->prepare("SELECT SUM(used_count) as total FROM coupons");
+    $stmt->execute();
+    $totalUsage = intval($stmt->fetch()['total'] ?? 0);
+    
+    // Total discount given
+    $stmt = $db->prepare("
+        SELECT COALESCE(SUM(discount_amount), 0) as total 
+        FROM coupon_usage
+    ");
+    $stmt->execute();
+    $totalDiscount = floatval($stmt->fetch()['total'] ?? 0);
+    
+    // Top used coupons
+    $stmt = $db->prepare("
+        SELECT c.*, 
+               COALESCE(SUM(cu.discount_amount), 0) as total_discount_given
+        FROM coupons c
+        LEFT JOIN coupon_usage cu ON cu.coupon_id = c.id
+        GROUP BY c.id
+        ORDER BY c.used_count DESC
+        LIMIT 10
+    ");
+    $stmt->execute();
+    $topCoupons = $stmt->fetchAll();
+    
+    // Coupon usage frequency (by day/month)
+    $stmt = $db->prepare("
+        SELECT DATE(used_at) as date, COUNT(*) as count
+        FROM coupon_usage
+        WHERE used_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY DATE(used_at)
+        ORDER BY date ASC
+    ");
+    $stmt->execute();
+    $usageFrequency = $stmt->fetchAll();
+    
+    return [
+        'total_coupons' => $totalCoupons,
+        'active_coupons' => $activeCoupons,
+        'expired_coupons' => $expiredCoupons,
+        'total_usage' => $totalUsage,
+        'total_discount' => $totalDiscount,
+        'top_coupons' => $topCoupons,
+        'usage_frequency' => $usageFrequency
+    ];
+}
+

@@ -415,6 +415,192 @@ switch ($action) {
         require_once __DIR__ . '/../views/admin/users.php';
         break;
 
+    case 'user-create':
+        Auth::requireAdmin();
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Verify CSRF token
+            $csrfToken = $_POST['csrf_token'] ?? '';
+            if (!Auth::verifyCsrfToken($csrfToken)) {
+                $error = 'Invalid security token. Please try again.';
+                require_once __DIR__ . '/../views/admin/user-form.php';
+                exit;
+            }
+            
+            require_once __DIR__ . '/../functions/helper_function.php';
+            require_once __DIR__ . '/../functions/user_function.php';
+            
+            $email = trim($_POST['email'] ?? '');
+            $password = $_POST['password'] ?? '';
+            $fullName = trim($_POST['full_name'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $address = trim($_POST['address'] ?? '');
+            $birthday = !empty($_POST['birthday']) ? $_POST['birthday'] : null;
+            
+            // Validation
+            if (empty($email) || empty($password) || empty($fullName)) {
+                $error = 'Email, password, and full name are required';
+            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $error = 'Invalid email format';
+            } elseif (strlen($password) < 6) {
+                $error = 'Password must be at least 6 characters';
+            } else {
+                // Check if email already exists
+                $db = Database::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT id FROM profiles WHERE email = :email");
+                $stmt->execute([':email' => $email]);
+                if ($stmt->fetch()) {
+                    $error = 'Email already exists';
+                } else {
+                    // Create user
+                    $userId = create_user($email, $password, $fullName);
+                    
+                    // Update additional fields
+                    if ($userId) {
+                        $updateData = [];
+                        if (!empty($phone)) $updateData['phone'] = $phone;
+                        if (!empty($address)) $updateData['address'] = $address;
+                        if (!empty($birthday)) $updateData['birthday'] = $birthday;
+                        
+                        if (!empty($updateData)) {
+                            update_user($userId, $updateData);
+                        }
+                        
+                        header('Location: ' . url('/admin/users?success=User created successfully'));
+                        exit;
+                    } else {
+                        $error = 'Failed to create user';
+                    }
+                }
+            }
+        }
+        
+        require_once __DIR__ . '/../views/admin/user-form.php';
+        break;
+
+    case 'user-edit':
+        Auth::requireAdmin();
+        
+        require_once __DIR__ . '/../functions/user_function.php';
+        
+        $id = $_GET['id'] ?? '';
+        $user = get_user_by_id($id);
+        
+        if (!$user) {
+            header('Location: ' . url('/admin/users'));
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Verify CSRF token
+            $csrfToken = $_POST['csrf_token'] ?? '';
+            if (!Auth::verifyCsrfToken($csrfToken)) {
+                $error = 'Invalid security token. Please try again.';
+                require_once __DIR__ . '/../views/admin/user-form.php';
+                exit;
+            }
+            
+            $email = trim($_POST['email'] ?? '');
+            $fullName = trim($_POST['full_name'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $address = trim($_POST['address'] ?? '');
+            $birthday = !empty($_POST['birthday']) ? $_POST['birthday'] : null;
+            $password = trim($_POST['password'] ?? '');
+            
+            // Validation
+            if (empty($email) || empty($fullName)) {
+                $error = 'Email and full name are required';
+            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $error = 'Invalid email format';
+            } else {
+                $db = Database::getInstance()->getConnection();
+                
+                // Check if email is changed and already exists
+                if ($email !== $user['email']) {
+                    $stmt = $db->prepare("SELECT id FROM profiles WHERE email = :email AND id != :id");
+                    $stmt->execute([':email' => $email, ':id' => $id]);
+                    if ($stmt->fetch()) {
+                        $error = 'Email already exists';
+                    } else {
+                        // Update email in both profiles and user_auth
+                        $stmt = $db->prepare("UPDATE profiles SET email = :email WHERE id = :id");
+                        $stmt->execute([':email' => $email, ':id' => $id]);
+                        
+                        $stmt = $db->prepare("UPDATE user_auth SET email = :email WHERE user_id = :id");
+                        $stmt->execute([':email' => $email, ':id' => $id]);
+                    }
+                }
+                
+                if (!isset($error)) {
+                    // Update profile
+                    $updateData = [
+                        'full_name' => $fullName,
+                        'phone' => $phone,
+                        'address' => $address,
+                        'birthday' => $birthday
+                    ];
+                    
+                    if (update_user($id, $updateData)) {
+                        // Update password if provided
+                        if (!empty($password)) {
+                            if (strlen($password) < 6) {
+                                $error = 'Password must be at least 6 characters';
+                            } else {
+                                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                                $stmt = $db->prepare("UPDATE user_auth SET password = :password WHERE user_id = :id");
+                                $stmt->execute([':password' => $hashedPassword, ':id' => $id]);
+                            }
+                        }
+                        
+                        if (!isset($error)) {
+                            header('Location: ' . url('/admin/users?success=User updated successfully'));
+                            exit;
+                        }
+                    } else {
+                        $error = 'Failed to update user';
+                    }
+                }
+            }
+        }
+        
+        require_once __DIR__ . '/../views/admin/user-form.php';
+        break;
+
+    case 'user-delete':
+        Auth::requireAdmin();
+        
+        $id = $_GET['id'] ?? '';
+        
+        // Prevent deleting admin users (check if exists in admins table)
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT id FROM admins WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        if ($stmt->fetch()) {
+            header('Location: ' . url('/admin/users?error=Cannot delete admin user'));
+            exit;
+        }
+        
+        // Check if user has bookings
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM bookings WHERE user_id = :id");
+        $stmt->execute([':id' => $id]);
+        $bookingCount = intval($stmt->fetch()['count'] ?? 0);
+        
+        if ($bookingCount > 0) {
+            header('Location: ' . url('/admin/users?error=Cannot delete user with existing bookings'));
+            exit;
+        }
+        
+        // Delete user (CASCADE will handle user_auth, bookings, etc.)
+        $stmt = $db->prepare("DELETE FROM profiles WHERE id = :id");
+        
+        if ($stmt->execute([':id' => $id])) {
+            header('Location: ' . url('/admin/users?success=User deleted successfully'));
+        } else {
+            header('Location: ' . url('/admin/users?error=Failed to delete user'));
+        }
+        exit;
+        break;
+
     case 'bookings':
         Auth::requireAdmin();
         require_once __DIR__ . '/../functions/pagination_function.php';
@@ -528,6 +714,258 @@ switch ($action) {
         } else {
             http_response_code(400);
             echo json_encode(['error' => 'Failed to update status']);
+        }
+        exit;
+        break;
+
+    case 'coupons':
+        Auth::requireAdmin();
+        require_once __DIR__ . '/../functions/pagination_function.php';
+        require_once __DIR__ . '/../functions/coupon_function.php';
+        
+        $search = trim($_GET['search'] ?? '');
+        $statusFilter = $_GET['status'] ?? '';
+        $filters = [];
+        
+        if (!empty($search)) {
+            $filters['search'] = $search;
+        }
+        
+        if (!empty($statusFilter)) {
+            $filters['status'] = $statusFilter;
+        }
+        
+        $itemsPerPage = 15;
+        $currentPage = max(1, intval($_GET['page'] ?? 1));
+        
+        $totalCoupons = count_coupons($filters);
+        $pagination = get_pagination_info($totalCoupons, $currentPage, $itemsPerPage);
+        
+        $coupons = get_all_coupons($filters, $itemsPerPage, $pagination['offset']);
+        
+        require_once __DIR__ . '/../views/admin/coupons.php';
+        break;
+
+    case 'coupon-create':
+        Auth::requireAdmin();
+        require_once __DIR__ . '/../functions/coupon_function.php';
+        require_once __DIR__ . '/../functions/tour_function.php';
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = [
+                'code' => trim($_POST['code'] ?? ''),
+                'status' => $_POST['status'] ?? 'active',
+                'discount_type' => $_POST['discount_type'] ?? 'percentage',
+                'discount_value' => $_POST['discount_value'] ?? 0,
+                'max_discount' => !empty($_POST['max_discount']) ? $_POST['max_discount'] : null,
+                'min_amount' => $_POST['min_amount'] ?? 0,
+                'usage_limit' => !empty($_POST['usage_limit']) ? intval($_POST['usage_limit']) : null,
+                'valid_from' => $_POST['valid_from'] ?? '',
+                'valid_to' => $_POST['valid_to'] ?? '',
+                'applicable_tours' => !empty($_POST['applicable_tours']) ? $_POST['applicable_tours'] : [],
+                'description' => $_POST['description'] ?? ''
+            ];
+            
+            // Validate
+            if (empty($data['code'])) {
+                $error = 'Coupon code is required';
+                $tours = get_all_tours();
+                require_once __DIR__ . '/../views/admin/coupon-form.php';
+                exit;
+            }
+            
+            // Check if code already exists
+            $existing = get_coupon_by_code($data['code']);
+            if ($existing) {
+                $error = 'Coupon code already exists';
+                $tours = get_all_tours();
+                require_once __DIR__ . '/../views/admin/coupon-form.php';
+                exit;
+            }
+            
+            $result = create_coupon($data);
+            if ($result) {
+                header('Location: ' . url('/admin/coupons?success=Coupon created successfully'));
+                exit;
+            } else {
+                $error = 'Failed to create coupon';
+                $tours = get_all_tours();
+                require_once __DIR__ . '/../views/admin/coupon-form.php';
+            }
+        } else {
+            $tours = get_all_tours();
+            require_once __DIR__ . '/../views/admin/coupon-form.php';
+        }
+        break;
+
+    case 'coupon-edit':
+        Auth::requireAdmin();
+        require_once __DIR__ . '/../functions/coupon_function.php';
+        require_once __DIR__ . '/../functions/tour_function.php';
+        
+        $id = $_GET['id'] ?? '';
+        $coupon = get_coupon_by_id($id);
+        
+        if (!$coupon) {
+            header('Location: ' . url('/admin/coupons?error=Coupon not found'));
+            exit;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = [
+                'code' => trim($_POST['code'] ?? ''),
+                'status' => $_POST['status'] ?? 'active',
+                'discount_type' => $_POST['discount_type'] ?? 'percentage',
+                'discount_value' => $_POST['discount_value'] ?? 0,
+                'max_discount' => !empty($_POST['max_discount']) ? $_POST['max_discount'] : null,
+                'min_amount' => $_POST['min_amount'] ?? 0,
+                'usage_limit' => !empty($_POST['usage_limit']) ? intval($_POST['usage_limit']) : null,
+                'valid_from' => $_POST['valid_from'] ?? '',
+                'valid_to' => $_POST['valid_to'] ?? '',
+                'applicable_tours' => !empty($_POST['applicable_tours']) ? $_POST['applicable_tours'] : [],
+                'description' => $_POST['description'] ?? ''
+            ];
+            
+            // Validate
+            if (empty($data['code'])) {
+                $error = 'Coupon code is required';
+                $tours = get_all_tours();
+                require_once __DIR__ . '/../views/admin/coupon-form.php';
+                exit;
+            }
+            
+            // Check if code already exists (except current coupon)
+            $existing = get_coupon_by_code($data['code']);
+            if ($existing && $existing['id'] !== $id) {
+                $error = 'Coupon code already exists';
+                $tours = get_all_tours();
+                require_once __DIR__ . '/../views/admin/coupon-form.php';
+                exit;
+            }
+            
+            $result = update_coupon($id, $data);
+            if ($result) {
+                header('Location: ' . url('/admin/coupons?success=Coupon updated successfully'));
+                exit;
+            } else {
+                $error = 'Failed to update coupon';
+                $tours = get_all_tours();
+                require_once __DIR__ . '/../views/admin/coupon-form.php';
+            }
+        } else {
+            $tours = get_all_tours();
+            require_once __DIR__ . '/../views/admin/coupon-form.php';
+        }
+        break;
+
+    case 'coupon-delete':
+        Auth::requireAdmin();
+        require_once __DIR__ . '/../functions/coupon_function.php';
+        
+        $id = $_GET['id'] ?? '';
+        $coupon = get_coupon_by_id($id);
+        
+        if (!$coupon) {
+            header('Location: ' . url('/admin/coupons?error=Coupon not found'));
+            exit;
+        }
+        
+        $result = delete_coupon($id);
+        if ($result) {
+            header('Location: ' . url('/admin/coupons?success=Coupon deleted successfully'));
+        } else {
+            header('Location: ' . url('/admin/coupons?error=Failed to delete coupon'));
+        }
+        exit;
+        break;
+
+    case 'coupon-statistics':
+        Auth::requireAdmin();
+        require_once __DIR__ . '/../functions/coupon_function.php';
+        
+        $stats = get_coupon_statistics();
+        
+        require_once __DIR__ . '/../views/admin/coupon-statistics.php';
+        break;
+
+    case 'coupon-import':
+        Auth::requireAdmin();
+        require_once __DIR__ . '/../functions/coupon_function.php';
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
+            $file = $_FILES['file'];
+            
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                header('Location: ' . url('/admin/coupons?error=File upload failed'));
+                exit;
+            }
+            
+            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            
+            if ($extension === 'csv') {
+                $successCount = 0;
+                $errorCount = 0;
+                $errors = [];
+                
+                $handle = fopen($file['tmp_name'], 'r');
+                $firstLine = true;
+                
+                while (($row = fgetcsv($handle)) !== false) {
+                    if ($firstLine) {
+                        $firstLine = false;
+                        continue; // Skip header
+                    }
+                    
+                    if (count($row) < 7) continue; // Minimum required columns
+                    
+                    $data = [
+                        'code' => trim($row[0] ?? ''),
+                        'status' => !empty($row[1]) ? trim($row[1]) : 'active',
+                        'discount_type' => !empty($row[2]) ? trim($row[2]) : 'percentage',
+                        'discount_value' => floatval($row[3] ?? 0),
+                        'max_discount' => !empty($row[4]) ? floatval($row[4]) : null,
+                        'min_amount' => floatval($row[5] ?? 0),
+                        'usage_limit' => !empty($row[6]) ? intval($row[6]) : null,
+                        'valid_from' => $row[7] ?? date('Y-m-d H:i:s'),
+                        'valid_to' => $row[8] ?? date('Y-m-d H:i:s', strtotime('+1 year')),
+                        'applicable_tours' => !empty($row[9]) ? explode(',', trim($row[9])) : [],
+                        'description' => $row[10] ?? ''
+                    ];
+                    
+                    if (empty($data['code'])) {
+                        $errorCount++;
+                        continue;
+                    }
+                    
+                    // Check if code already exists
+                    $existing = get_coupon_by_code($data['code']);
+                    if ($existing) {
+                        $errorCount++;
+                        $errors[] = "Coupon code {$data['code']} already exists";
+                        continue;
+                    }
+                    
+                    $result = create_coupon($data);
+                    if ($result) {
+                        $successCount++;
+                    } else {
+                        $errorCount++;
+                    }
+                }
+                
+                fclose($handle);
+                
+                $message = "Import completed: $successCount successful, $errorCount failed";
+                if (!empty($errors)) {
+                    $message .= ". Errors: " . implode(", ", array_slice($errors, 0, 5));
+                }
+                
+                header('Location: ' . url('/admin/coupons?success=' . urlencode($message)));
+            } else {
+                header('Location: ' . url('/admin/coupons?error=Only CSV files are supported'));
+            }
+        } else {
+            header('Location: ' . url('/admin/coupons?error=No file uploaded'));
         }
         exit;
         break;

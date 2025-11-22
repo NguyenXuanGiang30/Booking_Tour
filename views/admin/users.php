@@ -35,6 +35,9 @@ ob_start();
                     <a href="<?= url('/admin/users') ?>" class="block px-4 py-2 bg-blue-600 rounded-lg">
                         <i class="fas fa-users mr-2"></i> Users
                     </a>
+                    <a href="<?= url('/admin/coupons') ?>" class="block px-4 py-2 hover:bg-gray-800 rounded-lg transition-colors">
+                        <i class="fas fa-ticket-alt mr-2"></i> Coupons
+                    </a>
                     <a href="<?= url('/admin/logout') ?>" class="block px-4 py-2 hover:bg-gray-800 rounded-lg transition-colors mt-8">
                         <i class="fas fa-sign-out-alt mr-2"></i> Logout
                     </a>
@@ -43,7 +46,19 @@ ob_start();
         </div>
 
         <div class="flex-1 overflow-y-auto p-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-6">Manage Users</h1>
+            <div class="flex items-center justify-between mb-6">
+                <h1 class="text-3xl font-bold text-gray-900">Manage Users</h1>
+                <a href="<?= url('/admin/users/create') ?>" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                    <i class="fas fa-plus mr-2"></i> Add New User
+                </a>
+            </div>
+
+            <?php if (isset($_GET['success'])): ?>
+                <div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg"><?= htmlspecialchars($_GET['success']) ?></div>
+            <?php endif; ?>
+            <?php if (isset($_GET['error'])): ?>
+                <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg"><?= htmlspecialchars($_GET['error']) ?></div>
+            <?php endif; ?>
 
             <!-- Search Form -->
             <div class="bg-white rounded-xl shadow-lg p-4 mb-6">
@@ -82,6 +97,7 @@ ob_start();
                             <th class="text-left py-4 px-6 text-gray-600 font-semibold">Email</th>
                             <th class="text-left py-4 px-6 text-gray-600 font-semibold">Phone</th>
                             <th class="text-left py-4 px-6 text-gray-600 font-semibold">Joined</th>
+                            <th class="text-left py-4 px-6 text-gray-600 font-semibold">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -91,6 +107,18 @@ ob_start();
                                 <td class="py-4 px-6"><?= htmlspecialchars($user['email']) ?></td>
                                 <td class="py-4 px-6"><?= htmlspecialchars($user['phone'] ?: 'N/A') ?></td>
                                 <td class="py-4 px-6"><?= date('M j, Y', strtotime($user['created_at'])) ?></td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-2">
+                                        <a href="<?= url('/admin/users/edit/' . $user['id']) ?>" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors text-sm">
+                                            <i class="fas fa-edit mr-1"></i> Edit
+                                        </a>
+                                        <a href="<?= url('/admin/users/delete/' . $user['id']) ?>" 
+                                           onclick="return confirm('Are you sure you want to delete this user? This action cannot be undone.');"
+                                           class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors text-sm">
+                                            <i class="fas fa-trash mr-1"></i> Delete
+                                        </a>
+                                    </div>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

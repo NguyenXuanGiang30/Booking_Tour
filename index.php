@@ -199,12 +199,70 @@ $router->get('/admin/users', function() {
     $_GET['action'] = 'users';
     require_once 'handle/admin_process.php';
 });
+$router->get('/admin/users/create', function() {
+    $_GET['action'] = 'user-create';
+    require_once 'handle/admin_process.php';
+});
+$router->post('/admin/users/create', function() {
+    $_GET['action'] = 'user-create';
+    require_once 'handle/admin_process.php';
+});
+$router->get('/admin/users/edit/{id}', function($id) {
+    $_GET['action'] = 'user-edit';
+    $_GET['id'] = $id;
+    require_once 'handle/admin_process.php';
+});
+$router->post('/admin/users/edit/{id}', function($id) {
+    $_GET['action'] = 'user-edit';
+    $_GET['id'] = $id;
+    require_once 'handle/admin_process.php';
+});
+$router->get('/admin/users/delete/{id}', function($id) {
+    $_GET['action'] = 'user-delete';
+    $_GET['id'] = $id;
+    require_once 'handle/admin_process.php';
+});
 $router->get('/admin/bookings', function() {
     $_GET['action'] = 'bookings';
     require_once 'handle/admin_process.php';
 });
 $router->post('/admin/bookings/status', function() {
     $_GET['action'] = 'update-booking-status';
+    require_once 'handle/admin_process.php';
+});
+$router->get('/admin/coupons', function() {
+    $_GET['action'] = 'coupons';
+    require_once 'handle/admin_process.php';
+});
+$router->get('/admin/coupons/create', function() {
+    $_GET['action'] = 'coupon-create';
+    require_once 'handle/admin_process.php';
+});
+$router->post('/admin/coupons/create', function() {
+    $_GET['action'] = 'coupon-create';
+    require_once 'handle/admin_process.php';
+});
+$router->get('/admin/coupons/edit/{id}', function($id) {
+    $_GET['action'] = 'coupon-edit';
+    $_GET['id'] = $id;
+    require_once 'handle/admin_process.php';
+});
+$router->post('/admin/coupons/edit/{id}', function($id) {
+    $_GET['action'] = 'coupon-edit';
+    $_GET['id'] = $id;
+    require_once 'handle/admin_process.php';
+});
+$router->get('/admin/coupons/delete/{id}', function($id) {
+    $_GET['action'] = 'coupon-delete';
+    $_GET['id'] = $id;
+    require_once 'handle/admin_process.php';
+});
+$router->get('/admin/coupons/statistics', function() {
+    $_GET['action'] = 'coupon-statistics';
+    require_once 'handle/admin_process.php';
+});
+$router->post('/admin/coupons/import', function() {
+    $_GET['action'] = 'coupon-import';
     require_once 'handle/admin_process.php';
 });
 
