@@ -335,8 +335,41 @@ function updateDateAvailability() {
     
     // Check availability for selected date
     fetch(`<?= url('/api/tour/availability') ?>?tour_id=${tourId}&start_date=${date}&end_date=${date}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.error || 'Failed to check availability');
+                    } catch (e) {
+                        if (e instanceof Error && e.message) {
+                            throw e;
+                        }
+                        throw new Error('Failed to check availability');
+                    }
+                });
+            }
+            return response.text().then(text => {
+                if (!text || text.trim() === '') {
+                    throw new Error('Empty response from server');
+                }
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Invalid JSON response:', text);
+                    throw new Error('Invalid response from server');
+                }
+            });
+        })
         .then(data => {
+            // Check if response has error
+            if (data.error) {
+                console.error('Availability error:', data.error);
+                const availabilityDiv = document.getElementById('dateAvailability');
+                availabilityDiv.innerHTML = `<span class="text-yellow-600"><i class="fas fa-exclamation-circle"></i> Unable to check availability</span>`;
+                return;
+            }
+            
             const availability = data[date];
             const availabilityDiv = document.getElementById('dateAvailability');
             
@@ -359,6 +392,10 @@ function updateDateAvailability() {
         })
         .catch(error => {
             console.error('Error checking availability:', error);
+            const availabilityDiv = document.getElementById('dateAvailability');
+            if (availabilityDiv) {
+                availabilityDiv.innerHTML = `<span class="text-yellow-600"><i class="fas fa-exclamation-circle"></i> Unable to check availability</span>`;
+            }
         });
 }
 
@@ -368,13 +405,47 @@ function loadAvailabilityCalendar() {
     endDate.setMonth(endDate.getMonth() + 3);
     
     fetch(`<?= url('/api/tour/availability') ?>?tour_id=${tourId}&start_date=${startDate.toISOString().split('T')[0]}&end_date=${endDate.toISOString().split('T')[0]}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.error || 'Failed to load calendar');
+                    } catch (e) {
+                        if (e instanceof Error && e.message) {
+                            throw e;
+                        }
+                        throw new Error('Failed to load calendar');
+                    }
+                });
+            }
+            return response.text().then(text => {
+                if (!text || text.trim() === '') {
+                    throw new Error('Empty response from server');
+                }
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Invalid JSON response:', text);
+                    throw new Error('Invalid response from server');
+                }
+            });
+        })
         .then(data => {
+            // Check if response has error
+            if (data.error) {
+                console.error('Calendar error:', data.error);
+                availabilityCalendar = {}; // Set empty calendar
+                renderCalendar();
+                return;
+            }
             availabilityCalendar = data;
             renderCalendar();
         })
         .catch(error => {
             console.error('Error loading calendar:', error);
+            availabilityCalendar = {}; // Set empty calendar on error
+            renderCalendar();
         });
 }
 
@@ -457,7 +528,32 @@ function validateCoupon(silent = false) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                try {
+                    const json = JSON.parse(text);
+                    throw new Error(json.message || 'Request failed');
+                } catch (e) {
+                    if (e instanceof Error && e.message) {
+                        throw e;
+                    }
+                    throw new Error('Request failed with status ' + response.status);
+                }
+            });
+        }
+        return response.text().then(text => {
+            if (!text || text.trim() === '') {
+                throw new Error('Empty response from server');
+            }
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Invalid JSON response:', text);
+                throw new Error('Invalid response from server');
+            }
+        });
+    })
     .then(data => {
         if (data.valid) {
             appliedCoupon = couponCode;
@@ -489,7 +585,38 @@ function bookNow() {
         window.location.href = '<?= url('/login') ?>';
     <?php else: ?>
         const form = document.getElementById('bookingForm');
+        
+        // Validate form before submission
+        const bookingDate = document.getElementById('bookingDate').value;
+        if (!bookingDate) {
+            alert('Please select a booking date');
+            document.getElementById('bookingDate').focus();
+            return;
+        }
+        
+        const numberOfGuests = document.getElementById('guestsSelect').value;
+        if (!numberOfGuests || numberOfGuests < 1) {
+            alert('Please select number of guests');
+            return;
+        }
+        
         const formData = new FormData(form);
+        
+        // Ensure all required fields are present
+        if (!formData.has('booking_date') || !formData.get('booking_date')) {
+            formData.set('booking_date', bookingDate);
+        }
+        if (!formData.has('tour_id')) {
+            formData.set('tour_id', tourId);
+        }
+        if (!formData.has('number_of_guests')) {
+            formData.set('number_of_guests', numberOfGuests);
+        }
+        
+        // Add traveler info (empty object if not provided)
+        if (!formData.has('traveler_info')) {
+            formData.set('traveler_info', JSON.stringify({}));
+        }
         
         // Add coupon code if applied
         if (appliedCoupon) {
@@ -501,7 +628,36 @@ function bookNow() {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is ok
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.error || 'Request failed');
+                    } catch (e) {
+                        if (e instanceof Error && e.message) {
+                            throw e;
+                        }
+                        throw new Error('Request failed with status ' + response.status);
+                    }
+                });
+            }
+            
+            // Get response text first to check if it's valid JSON
+            return response.text().then(text => {
+                if (!text || text.trim() === '') {
+                    throw new Error('Empty response from server');
+                }
+                
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Invalid JSON response:', text);
+                    throw new Error('Invalid response from server. Please try again.');
+                }
+            });
+        })
         .then(data => {
             if (data.success) {
                 alert('Booking created successfully!');
@@ -511,7 +667,8 @@ function bookNow() {
             }
         })
         .catch(error => {
-            alert('Error: ' + error.message);
+            console.error('Booking error:', error);
+            alert('Error: ' + (error.message || 'An unexpected error occurred. Please try again.'));
         });
     <?php endif; ?>
 }
@@ -524,7 +681,32 @@ function toggleWishlist(tourId) {
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: 'tour_id=' + tourId
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                try {
+                    const json = JSON.parse(text);
+                    throw new Error(json.error || 'Request failed');
+                } catch (e) {
+                    if (e instanceof Error && e.message) {
+                        throw e;
+                    }
+                    throw new Error('Request failed with status ' + response.status);
+                }
+            });
+        }
+        return response.text().then(text => {
+            if (!text || text.trim() === '') {
+                throw new Error('Empty response from server');
+            }
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Invalid JSON response:', text);
+                throw new Error('Invalid response from server');
+            }
+        });
+    })
     .then(data => {
         if (data.success) {
             document.getElementById('wishlistBtn').innerHTML = '<i class="fas fa-heart text-red-500"></i>';
@@ -533,7 +715,8 @@ function toggleWishlist(tourId) {
         }
     })
     .catch(error => {
-        alert('Error: ' + error.message);
+        console.error('Wishlist error:', error);
+        alert('Error: ' + (error.message || 'Failed to add to wishlist'));
     });
 }
 <?php endif; ?>

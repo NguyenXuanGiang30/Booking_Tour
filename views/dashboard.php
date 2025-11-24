@@ -422,6 +422,8 @@ ob_start();
             </button>
         </div>
         <form id="paymentMethodForm" method="POST" action="<?= url('/dashboard/payment-method/add') ?>" class="space-y-4">
+            <?php require_once __DIR__ . '/../includes/Auth.php'; ?>
+            <input type="hidden" name="csrf_token" value="<?= Auth::generateCsrfToken() ?>" id="paymentMethodCsrfToken">
             <input type="hidden" name="id" id="paymentMethodId">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
@@ -513,7 +515,32 @@ function removeWishlist(tourId) {
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: 'tour_id=' + tourId
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.error || 'Request failed');
+                    } catch (e) {
+                        if (e instanceof Error && e.message) {
+                            throw e;
+                        }
+                        throw new Error('Request failed with status ' + response.status);
+                    }
+                });
+            }
+            return response.text().then(text => {
+                if (!text || text.trim() === '') {
+                    throw new Error('Empty response from server');
+                }
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Invalid JSON response:', text);
+                    throw new Error('Invalid response from server');
+                }
+            });
+        })
         .then(data => {
             if (data.success) {
                 location.reload();
@@ -522,7 +549,8 @@ function removeWishlist(tourId) {
             }
         })
         .catch(error => {
-            alert('Error: ' + error.message);
+            console.error('Wishlist error:', error);
+            alert('Error: ' + (error.message || 'Failed to remove from wishlist'));
         });
     }
 }
@@ -579,6 +607,7 @@ function openPaymentMethodModal(method = null) {
     const form = document.getElementById('paymentMethodForm');
     const title = document.getElementById('paymentMethodModalTitle');
     const submitText = document.getElementById('paymentMethodSubmitText');
+    const csrfToken = document.getElementById('paymentMethodCsrfToken').value;
     
     if (method) {
         // Edit mode
@@ -597,6 +626,8 @@ function openPaymentMethodModal(method = null) {
         submitText.textContent = 'Add';
         form.action = '<?= url('/dashboard/payment-method/add') ?>';
         form.reset();
+        // Restore CSRF token after reset
+        document.getElementById('paymentMethodCsrfToken').value = csrfToken;
         document.getElementById('paymentMethodId').value = '';
     }
     
@@ -605,8 +636,14 @@ function openPaymentMethodModal(method = null) {
 }
 
 function closePaymentMethodModal() {
-    document.getElementById('paymentMethodModal').classList.add('hidden');
-    document.getElementById('paymentMethodForm').reset();
+    const modal = document.getElementById('paymentMethodModal');
+    const form = document.getElementById('paymentMethodForm');
+    const csrfToken = document.getElementById('paymentMethodCsrfToken').value;
+    
+    modal.classList.add('hidden');
+    form.reset();
+    // Restore CSRF token after reset
+    document.getElementById('paymentMethodCsrfToken').value = csrfToken;
     document.getElementById('paymentMethodId').value = '';
 }
 

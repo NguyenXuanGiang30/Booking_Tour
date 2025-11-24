@@ -153,13 +153,42 @@ ob_start();
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.error || 'Request failed');
+                    } catch (e) {
+                        if (e instanceof Error && e.message) {
+                            throw e;
+                        }
+                        throw new Error('Request failed with status ' + response.status);
+                    }
+                });
+            }
+            return response.text().then(text => {
+                if (!text || text.trim() === '') {
+                    throw new Error('Empty response from server');
+                }
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Invalid JSON response:', text);
+                    throw new Error('Invalid response from server');
+                }
+            });
+        })
         .then(data => {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Failed to update status');
+                alert('Failed to update status: ' + (data.error || 'Unknown error'));
             }
+        })
+        .catch(error => {
+            console.error('Status update error:', error);
+            alert('Error: ' + (error.message || 'Failed to update status'));
         });
     }
     </script>

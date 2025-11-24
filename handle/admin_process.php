@@ -679,41 +679,109 @@ switch ($action) {
         break;
 
     case 'update-booking-status':
+        // Disable error display for JSON responses
+        $oldErrorReporting = error_reporting(0);
+        $oldDisplayErrors = ini_get('display_errors');
+        ini_set('display_errors', 0);
+        
+        // Start output buffering
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        ob_start();
+        
         Auth::requireAdmin();
         
-        $id = $_POST['id'] ?? '';
-        $status = $_POST['status'] ?? '';
-        
-        // Get old status before update
-        require_once __DIR__ . '/../functions/booking_function.php';
-        $oldBooking = get_booking_by_id($id);
-        $oldStatus = $oldBooking['status'] ?? 'pending';
-        
-        $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("UPDATE bookings SET status = :status, updated_at = NOW() WHERE id = :id");
-        
-        header('Content-Type: application/json');
-        if ($stmt->execute([':status' => $status, ':id' => $id])) {
-            // Send email notification if status changed
-            if ($oldStatus !== $status && $oldBooking) {
-                require_once __DIR__ . '/../includes/Email.php';
-                require_once __DIR__ . '/../functions/user_function.php';
-                require_once __DIR__ . '/../functions/tour_function.php';
-                
-                $booking = get_booking_by_id($id);
-                if ($booking) {
-                    $user = get_user_by_id($booking['user_id']);
-                    $tour = get_tour_by_id($booking['tour_id']);
-                    if ($user && $tour) {
-                        Email::sendBookingStatusUpdate($booking, $user, $tour, $oldStatus, $status);
-                    }
+        try {
+            $id = $_POST['id'] ?? '';
+            $status = $_POST['status'] ?? '';
+            
+            if (empty($id) || empty($status)) {
+                while (ob_get_level() > 0) {
+                    ob_end_clean();
                 }
+                header_remove();
+                http_response_code(400);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'Booking ID and status are required']);
+                exit;
             }
             
-            echo json_encode(['success' => true]);
-        } else {
-            http_response_code(400);
-            echo json_encode(['error' => 'Failed to update status']);
+            // Get old status before update
+            require_once __DIR__ . '/../functions/booking_function.php';
+            $oldBooking = get_booking_by_id($id);
+            
+            if (!$oldBooking) {
+                while (ob_get_level() > 0) {
+                    ob_end_clean();
+                }
+                header_remove();
+                http_response_code(404);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'Booking not found']);
+                exit;
+            }
+            
+            $oldStatus = $oldBooking['status'] ?? 'pending';
+            
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("UPDATE bookings SET status = :status, updated_at = NOW() WHERE id = :id");
+            
+            if ($stmt->execute([':status' => $status, ':id' => $id])) {
+                // Send email notification if status changed (suppress any output)
+                try {
+                    ob_start();
+                    if ($oldStatus !== $status && $oldBooking) {
+                        require_once __DIR__ . '/../includes/Email.php';
+                        require_once __DIR__ . '/../functions/user_function.php';
+                        require_once __DIR__ . '/../functions/tour_function.php';
+                        
+                        $booking = get_booking_by_id($id);
+                        if ($booking) {
+                            $user = get_user_by_id($booking['user_id']);
+                            $tour = get_tour_by_id($booking['tour_id']);
+                            if ($user && $tour) {
+                                Email::sendBookingStatusUpdate($booking, $user, $tour, $oldStatus, $status);
+                            }
+                        }
+                    }
+                    ob_end_clean();
+                } catch (Exception $emailException) {
+                    if (ob_get_level() > 0) {
+                        ob_end_clean();
+                    }
+                    error_log('Email sending failed: ' . $emailException->getMessage());
+                }
+                
+                // Clear output buffer
+                while (ob_get_level() > 0) {
+                    ob_end_clean();
+                }
+                
+                header_remove();
+                header('Content-Type: application/json; charset=utf-8');
+                header('Cache-Control: no-cache, must-revalidate');
+                echo json_encode(['success' => true]);
+            } else {
+                while (ob_get_level() > 0) {
+                    ob_end_clean();
+                }
+                header_remove();
+                http_response_code(400);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'Failed to update status']);
+            }
+        } catch (Throwable $e) {
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            header_remove();
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'An error occurred', 'details' => DEBUG ? $e->getMessage() : '']);
+        } finally {
+            error_reporting($oldErrorReporting);
+            ini_set('display_errors', $oldDisplayErrors);
         }
         exit;
         break;
